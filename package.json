@@ -1,0 +1,17 @@
+{
+  "name": "open-gt",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n server,dashboard -c blue,green \"pnpm --filter @opengt/server dev\" \"pnpm --filter @opengt/dashboard dev\"",
+    "dev:server": "pnpm --filter @opengt/server dev",
+    "dev:dashboard": "pnpm --filter @opengt/dashboard dev",
+    "build": "pnpm --filter @opengt/dashboard build",
+    "check": "biome check .",
+    "format": "biome format --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2",
+    "concurrently": "^9"
+  }
+}

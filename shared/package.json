@@ -1,0 +1,23 @@
+{
+  "name": "@opengt/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./types": {
+      "default": "./src/types.ts"
+    },
+    "./constants": {
+      "default": "./src/constants.ts"
+    },
+    "./engineer-types": {
+      "default": "./src/engineer-types.ts"
+    },
+    "./callout-types": {
+      "default": "./src/callout-types.ts"
+    },
+    "./personalities": {
+      "default": "./src/personalities.ts"
+    }
+  }
+}

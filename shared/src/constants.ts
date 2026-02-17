@@ -1,0 +1,9 @@
+export const WS_PORT = 4401;
+export const DASHBOARD_PORT = 4500;
+export const GT7_SEND_PORT = 33739;
+export const GT7_RECV_PORT = 33740;
+export const BROADCAST_HZ = 30;
+export const HEARTBEAT_INTERVAL_MS = 10_000;
+export const MAGIC_GT7 = 0x47375330;
+export const SALSA_KEY = "Simulator Interface Packet GT7 ver 0.0";
+export const PACKET_SIZE = 296;
