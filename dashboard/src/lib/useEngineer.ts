@@ -30,6 +30,7 @@ export function useEngineer() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const playbackNodeRef = useRef<AudioWorkletNode | null>(null);
+  const playbackInitPromiseRef = useRef<Promise<void> | null>(null);
   const currentMessageTimerRef = useRef<NodeJS.Timeout | null>(null);
   const modeRef = useRef<"ptk" | "always-open">("ptk");
 
@@ -54,14 +55,19 @@ export function useEngineer() {
 
     socket.on("engineer:audio:out", async (base64Audio: string) => {
       try {
-        // Ensure playback worklet is initialized
+        // Ensure playback worklet is initialized (guard against concurrent init)
         if (!playbackNodeRef.current) {
-          const ctx = new AudioContext({ sampleRate: 24000 });
-          audioContextRef.current = ctx;
-          await ctx.audioWorklet.addModule("/pcm-playback-processor.js");
-          const node = new AudioWorkletNode(ctx, "pcm-playback-processor");
-          node.connect(ctx.destination);
-          playbackNodeRef.current = node;
+          if (!playbackInitPromiseRef.current) {
+            playbackInitPromiseRef.current = (async () => {
+              const ctx = new AudioContext({ sampleRate: 24000 });
+              audioContextRef.current = ctx;
+              await ctx.audioWorklet.addModule("/pcm-playback-processor.js");
+              const node = new AudioWorkletNode(ctx, "pcm-playback-processor");
+              node.connect(ctx.destination);
+              playbackNodeRef.current = node;
+            })();
+          }
+          await playbackInitPromiseRef.current;
         }
 
         // Decode base64 → 16-bit PCM → float32 and post to worklet
@@ -176,6 +182,11 @@ export function useEngineer() {
   const stop = useCallback(() => {
     stopMic();
     socketRef.current?.emit("engineer:stop");
+    playbackNodeRef.current?.disconnect();
+    playbackNodeRef.current = null;
+    playbackInitPromiseRef.current = null;
+    audioContextRef.current?.close();
+    audioContextRef.current = null;
     setMessages([]);
     setCurrentMessage(null);
   }, [stopMic]);
