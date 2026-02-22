@@ -1,10 +1,10 @@
 import type {
   FourCorners,
   LapTimeTrend,
+  TelemetryData,
   TelemetrySnapshot,
   TempTrend,
-} from "@opengt/shared/engineer-types";
-import type { TelemetryData } from "@opengt/shared/types";
+} from "@opengt/shared/types";
 
 const TEMP_WINDOW_MS = 5_000;
 const TREND_THRESHOLD = 3; // °C change to count as rising/cooling

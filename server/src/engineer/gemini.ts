@@ -1,6 +1,4 @@
-import type { Callout } from "@opengt/shared/callout-types";
-import type { TelemetrySnapshot } from "@opengt/shared/engineer-types";
-import type { EngineerPersonality } from "@opengt/shared/personalities";
+import type { Callout, EngineerPersonality, TelemetrySnapshot } from "@opengt/shared/types";
 import { GoogleGenAI, type LiveServerMessage, Modality } from "@google/genai";
 
 export interface GeminiSessionConfig {

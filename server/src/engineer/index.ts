@@ -1,7 +1,5 @@
-import type { Callout, VerbosityLevel } from "@opengt/shared/callout-types";
-import type { TelemetrySnapshot } from "@opengt/shared/engineer-types";
-import type { EngineerPersonality } from "@opengt/shared/personalities";
 import { PERSONALITIES } from "@opengt/shared/personalities";
+import type { Callout, EngineerPersonality, TelemetrySnapshot, VerbosityLevel } from "@opengt/shared/types";
 import type { Server } from "socket.io";
 import { createGeminiSession, type GeminiSession } from "./gemini.js";
 

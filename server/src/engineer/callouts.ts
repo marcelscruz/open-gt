@@ -2,9 +2,9 @@ import type {
   Callout,
   CalloutPriority,
   CalloutType,
+  TelemetrySnapshot,
   VerbosityLevel,
-} from "@opengt/shared/callout-types";
-import type { TelemetrySnapshot } from "@opengt/shared/engineer-types";
+} from "@opengt/shared/types";
 
 interface CooldownMap {
   [key: string]: number; // callout type → last fired timestamp

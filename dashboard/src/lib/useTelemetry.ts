@@ -1,6 +1,5 @@
 "use client";
-import type { TelemetrySnapshot } from "@opengt/shared/engineer-types";
-import type { TelemetryData } from "@opengt/shared/types";
+import type { TelemetryData, TelemetrySnapshot } from "@opengt/shared/types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 
