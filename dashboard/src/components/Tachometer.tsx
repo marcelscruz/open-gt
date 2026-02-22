@@ -1,17 +1,8 @@
 "use client";
 import { useEffect, useRef } from "react";
 
-/** Lerp between two [r,g,b] colors */
-function lerpColor(a: [number, number, number], b: [number, number, number], t: number): string {
-  const r = Math.round(a[0] + (b[0] - a[0]) * t);
-  const g = Math.round(a[1] + (b[1] - a[1]) * t);
-  const bl = Math.round(a[2] + (b[2] - a[2]) * t);
-  return `rgb(${r},${g},${bl})`;
-}
-
-const COLOR_RED: [number, number, number] = [239, 68, 68];
-const COLOR_LAVENDER: [number, number, number] = [210, 170, 240];
-const COLOR_LIGHT_BLUE: [number, number, number] = [100, 180, 255];
+const FILL_COLOR = "rgb(239,68,68)";
+const FILL_COLOR_DIM = "rgba(239,68,68,0.25)";
 
 export function Tachometer({
   rpm,
@@ -62,43 +53,9 @@ export function Tachometer({
       ctx.lineCap = "round";
       ctx.stroke();
 
-      // Redline zone marker
-      if (minAlert > 0) {
-        const redStart = startAngle + (minAlert / maxRPM) * totalArc;
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, redStart, endAngle);
-        ctx.strokeStyle = "rgba(100,180,255,0.15)";
-        ctx.lineWidth = 12;
-        ctx.lineCap = "round";
-        ctx.stroke();
-      }
-
-      // Compute fill color based on RPM proximity to minAlert
+      // Blink fill when in redzone, solid red otherwise
       const inRedzone = minAlert > 0 && rpm >= minAlert;
-      // Transition zone: start blending 8% of minAlert before it
-      const transitionStart = minAlert * 0.92;
-      const transitionRange = minAlert - transitionStart;
-
-      let fillColor: string;
-      if (inRedzone) {
-        // In redzone: light blue, blink on/off
-        fillColor = blinkRef.current
-          ? lerpColor(COLOR_LIGHT_BLUE, COLOR_LIGHT_BLUE, 1)
-          : "rgba(100,180,255,0.25)";
-      } else if (minAlert > 0 && rpm > transitionStart) {
-        // Transitioning: red → white → light blue
-        const t = (rpm - transitionStart) / transitionRange; // 0..1
-        if (t < 0.5) {
-          // red → white (first half)
-          fillColor = lerpColor(COLOR_RED, COLOR_LAVENDER, t * 2);
-        } else {
-          // white → light blue (second half)
-          fillColor = lerpColor(COLOR_LAVENDER, COLOR_LIGHT_BLUE, (t - 0.5) * 2);
-        }
-      } else {
-        // Normal: red
-        fillColor = lerpColor(COLOR_RED, COLOR_RED, 1);
-      }
+      const fillColor = inRedzone && !blinkRef.current ? FILL_COLOR_DIM : FILL_COLOR;
 
       // RPM fill arc
       const pct = Math.min(rpm / maxRPM, 1);
@@ -112,11 +69,8 @@ export function Tachometer({
         ctx.stroke();
       }
 
-      // RPM text — also blinks in redzone
-      const textColor = inRedzone
-        ? blinkRef.current ? "#64b4ff" : "rgba(100,180,255,0.3)"
-        : "#fafafa";
-      ctx.fillStyle = textColor;
+      // RPM text — always white
+      ctx.fillStyle = "#fafafa";
       ctx.font = "bold 36px monospace";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";

@@ -49,19 +49,19 @@ export function EngineerHistory({ messages, isOpen, onToggle }: Props) {
   return (
     <div
       className={`fixed top-0 right-0 h-full bg-card border-l border-border transition-transform duration-200 z-40 ${isOpen ? "translate-x-0" : "translate-x-full"}`}
-      style={{ width: "320px" }}
+      style={{ width: "340px" }}
     >
       {/* Toggle button */}
       <button
         type="button"
         onClick={onToggle}
-        className="absolute -left-8 top-4 w-8 h-8 bg-card border border-border border-r-0 rounded-l flex items-center justify-center text-muted-foreground hover:text-foreground"
+        className="absolute -left-10 top-4 w-10 h-10 bg-card border border-border border-r-0 rounded-l flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 cursor-pointer transition"
       >
         {isOpen ? "›" : "‹"}
       </button>
 
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border">
+      <div className="px-4 py-4 border-b border-border">
         <h3 className="text-xs text-muted-foreground uppercase tracking-wider">Engineer Comms</h3>
         <span className="text-xs text-muted-foreground/50">{messages.length} messages</span>
       </div>
@@ -70,7 +70,7 @@ export function EngineerHistory({ messages, isOpen, onToggle }: Props) {
       <div
         ref={scrollRef}
         onScroll={onScroll}
-        className="overflow-y-auto h-[calc(100%-52px)] p-2 space-y-1"
+        className="overflow-y-auto h-[calc(100%-60px)] p-3 space-y-1"
       >
         {messages.length === 0 && (
           <p className="text-xs text-muted-foreground/50 text-center mt-8">No messages yet</p>
@@ -78,7 +78,7 @@ export function EngineerHistory({ messages, isOpen, onToggle }: Props) {
         {messages.map((msg, i) => (
           <div
             key={`${msg.timestamp}-${i}`}
-            className="px-2 py-1.5 rounded text-xs hover:bg-muted/50"
+            className="px-3 py-2 rounded-md text-xs hover:bg-muted/50"
           >
             <div className="flex items-center gap-1.5 mb-0.5">
               <span>{TYPE_ICONS[msg.type] ?? "📡"}</span>

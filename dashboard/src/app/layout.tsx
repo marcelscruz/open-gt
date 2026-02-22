@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "GT7 Telemetry",
-  description: "Gran Turismo 7 Real-Time Telemetry Dashboard",
+  title: "Open GT",
+  description: "Open GT — Real-Time Telemetry Dashboard",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

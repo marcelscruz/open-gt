@@ -52,14 +52,14 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-lg font-bold tracking-wider text-muted-foreground uppercase">
-          GT7 Telemetry
+          Open GT
         </h1>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <a
             href="/settings"
-            className="text-xs text-muted-foreground hover:text-foreground transition"
+            className="text-sm text-muted-foreground hover:text-foreground transition cursor-pointer px-3 py-2 rounded-md hover:bg-muted/50"
           >
-            ⚙ Settings
+            <span className="text-lg">⚙</span> Settings
           </a>
           <ConnectionStatus connected={connected} />
         </div>
@@ -104,7 +104,7 @@ export default function Dashboard() {
 
         {/* Right column: Laps + Fuel + Info */}
         <div className="col-span-3 space-y-4">
-          <Card title="Lap Times">
+          <Card title="Laps">
             <LapTimes
               lap={d?.lapCount ?? 0}
               totalLaps={d?.totalLaps ?? 0}

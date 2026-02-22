@@ -17,9 +17,8 @@ export function FuelGauge({
     fuelUsageEnabled === true && estimatedLaps != null && Number.isFinite(estimatedLaps);
 
   return (
-    <div className="space-y-2">
-      <div className="flex justify-between text-sm">
-        <span className="text-muted-foreground">Fuel</span>
+    <div className="space-y-1 text-xs">
+      <div className="flex justify-end">
         <span style={{ color }}>{pct}%</span>
       </div>
       <div className="w-full h-3 bg-border rounded-full overflow-hidden">
@@ -28,7 +27,7 @@ export function FuelGauge({
           style={{ width: `${pct}%`, backgroundColor: color }}
         />
       </div>
-      <div className="flex justify-between text-xs text-muted-foreground">
+      <div className="flex justify-between text-muted-foreground">
         <span>{level.toFixed(1)} / {capacity.toFixed(0)} L</span>
         {showEstimate && (
           <span style={{ color: estimatedLaps < 3 ? "#ef4444" : undefined }}>

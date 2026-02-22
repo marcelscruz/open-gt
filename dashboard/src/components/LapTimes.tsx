@@ -12,9 +12,8 @@ export function LapTimes({
   last: string;
 }) {
   return (
-    <div className="space-y-2 text-sm">
-      <div className="flex justify-between">
-        <span className="text-muted-foreground">Lap</span>
+    <div className="space-y-1 text-xs">
+      <div className="flex justify-end text-base">
         <span className="font-bold">
           {lap}
           {totalLaps > 0 ? ` / ${totalLaps}` : ""}
