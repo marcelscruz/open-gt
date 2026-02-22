@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "postinstall": "test -f .env || cp .env.example .env",
     "dev": "concurrently -n server,dashboard -c blue,green \"pnpm --filter @opengt/server dev\" \"pnpm --filter @opengt/dashboard dev\"",
     "dev:server": "pnpm --filter @opengt/server dev",
     "dev:dashboard": "pnpm --filter @opengt/dashboard dev",
