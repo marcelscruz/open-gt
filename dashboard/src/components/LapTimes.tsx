@@ -15,7 +15,7 @@ export function LapTimes({
     <div className="space-y-1 text-xs">
       <div className="flex justify-end text-base">
         <span className="font-bold">
-          {lap}
+          {totalLaps > 0 ? Math.min(lap, totalLaps) : lap}
           {totalLaps > 0 ? ` / ${totalLaps}` : ""}
         </span>
       </div>
