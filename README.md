@@ -43,12 +43,18 @@ Dashboard at `http://localhost:4500`, telemetry server on `ws://localhost:4401`.
 
 Fire up a race in GT7 — the server finds your console automatically and data starts flowing.
 
-If auto-discovery doesn't work (different subnet, VPN, etc.), point it at your console directly:
+If auto-discovery doesn't work (different subnet, VPN, etc.), point it at your console directly by adding its IP address to your `.env` file:
 
 ```bash
 # .env
-PS5_IP=192.168.1.100
+PS5_IP=<your console's IP address>
 ```
+
+> **How to find your console's IP address:**
+>
+> On your PS5, go to **Settings > Network > Connection Status > View Connection Status** and use the **IPv4 Address** field (it will look something like `192.168.X.X` or `10.0.X.X`). Copy that number into the `.env` file above, replacing `<your console's IP address>`.
+>
+> On PS4, go to **Settings > Network > View Connection Status** and use the **IP Address** field.
 
 ## How It Works
 
