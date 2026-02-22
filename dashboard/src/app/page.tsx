@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { io, type Socket } from "socket.io-client";
 import { ConnectionStatus } from "@/components/ConnectionStatus";
 import { EngineerHistory } from "@/components/engineer/EngineerHistory";
 import { EngineerOverlay } from "@/components/engineer/EngineerOverlay";
@@ -19,7 +20,7 @@ import { useTelemetry } from "@/lib/useTelemetry";
 const PERSONALITY_NAMES: Record<string, string> = {
   marcus: "Marcus",
   johnny: "Johnny",
-  data: "Data",
+  blank: "Custom",
 };
 
 export default function Dashboard() {
@@ -27,6 +28,22 @@ export default function Dashboard() {
   const engineer = useEngineer();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [activePersonality, setActivePersonality] = useState("marcus");
+  const [hasApiKey, setHasApiKey] = useState(false);
+  const configSocketRef = useRef<Socket | null>(null);
+
+  // Listen to config:state to track whether an API key is available
+  useEffect(() => {
+    const socket = io("http://localhost:4401", { transports: ["websocket"] });
+    configSocketRef.current = socket;
+
+    socket.on("config:state", (state: { hasApiKey: boolean }) => {
+      setHasApiKey(state.hasApiKey);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   const d = data;
 
@@ -132,6 +149,7 @@ export default function Dashboard() {
 
       <EngineerSettings
         isConnected={engineer.isConnected}
+        hasApiKey={hasApiKey}
         onStart={(settings) => {
           setActivePersonality(settings.personalityId);
           engineer.start(settings);

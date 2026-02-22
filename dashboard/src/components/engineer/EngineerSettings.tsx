@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { EngineerSettings as Settings, VerbosityLevel } from "@/lib/useEngineer";
 
 interface Props {
   isConnected: boolean;
+  hasApiKey: boolean;
   onStart: (settings: Settings) => void;
   onStop: () => void;
   onVerbosityChange: (level: VerbosityLevel) => void;
@@ -12,7 +13,7 @@ interface Props {
 const PERSONALITIES = [
   { id: "marcus", name: "Marcus", desc: "Calm F1 strategist" },
   { id: "johnny", name: "Johnny", desc: "Enthusiastic spotter" },
-  { id: "data", name: "Data", desc: "Pure information" },
+  { id: "blank", name: "Custom", desc: "Build your own" },
 ];
 
 const VERBOSITY_LABELS: Record<VerbosityLevel, { name: string; desc: string }> = {
@@ -21,14 +22,30 @@ const VERBOSITY_LABELS: Record<VerbosityLevel, { name: string; desc: string }> =
   3: { name: "Full", desc: "Everything, every lap" },
 };
 
-export function EngineerSettings({ isConnected, onStart, onStop, onVerbosityChange }: Props) {
+const LS_PERSONALITY_KEY = "opengt:personalityId";
+const LS_INSTRUCTIONS_KEY = "opengt:customInstructions";
+
+export function EngineerSettings({ isConnected, hasApiKey, onStart, onStop, onVerbosityChange }: Props) {
   const [personalityId, setPersonalityId] = useState("marcus");
   const [verbosity, setVerbosity] = useState<VerbosityLevel>(2);
   const [mode, setMode] = useState<"ptk" | "always-open">("ptk");
   const [isOpen, setIsOpen] = useState(false);
 
+  // Sync personality from localStorage (settings page is source of truth)
+  useEffect(() => {
+    const stored = localStorage.getItem(LS_PERSONALITY_KEY);
+    if (stored) setPersonalityId(stored);
+
+    function onStorage(e: StorageEvent) {
+      if (e.key === LS_PERSONALITY_KEY && e.newValue) setPersonalityId(e.newValue);
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
   function handleStart() {
-    onStart({ personalityId, verbosity, mode });
+    const customInstructions = localStorage.getItem(LS_INSTRUCTIONS_KEY)?.trim() || undefined;
+    onStart({ personalityId, customInstructions, verbosity, mode });
   }
 
   function handleVerbosityChange(level: VerbosityLevel) {
@@ -48,6 +65,8 @@ export function EngineerSettings({ isConnected, onStart, onStop, onVerbosityChan
       </button>
     );
   }
+
+  const canStart = hasApiKey && !isConnected;
 
   return (
     <div className="fixed bottom-4 right-4 w-72 bg-card border border-border rounded-lg p-4 z-50 shadow-lg">
@@ -70,7 +89,10 @@ export function EngineerSettings({ isConnected, onStart, onStop, onVerbosityChan
             <button
               type="button"
               key={p.id}
-              onClick={() => setPersonalityId(p.id)}
+              onClick={() => {
+                setPersonalityId(p.id);
+                localStorage.setItem(LS_PERSONALITY_KEY, p.id);
+              }}
               disabled={isConnected}
               className={`w-full text-left px-2 py-1.5 rounded text-xs transition ${
                 personalityId === p.id
@@ -78,7 +100,7 @@ export function EngineerSettings({ isConnected, onStart, onStop, onVerbosityChan
                   : "text-muted-foreground hover:bg-muted/50"
               } ${isConnected ? "opacity-50 cursor-not-allowed" : ""}`}
             >
-              <span className="font-medium">{p.name}</span>
+              <span className="font-medium">{personalityId === p.id ? "✓ " : ""}{p.name}</span>
               <span className="text-muted-foreground/70 ml-1">— {p.desc}</span>
             </button>
           ))}
@@ -148,13 +170,29 @@ export function EngineerSettings({ isConnected, onStart, onStop, onVerbosityChan
           Stop Engineer
         </button>
       ) : (
-        <button
-          type="button"
-          onClick={handleStart}
-          className="w-full py-2 rounded text-xs font-medium bg-accent-green/20 text-accent-green hover:bg-accent-green/30 transition"
-        >
-          Start Engineer
-        </button>
+        <div>
+          <button
+            type="button"
+            onClick={handleStart}
+            disabled={!canStart}
+            className={`w-full py-2 rounded text-xs font-medium transition ${
+              canStart
+                ? "bg-accent-green/20 text-accent-green hover:bg-accent-green/30"
+                : "bg-muted text-muted-foreground/40 cursor-not-allowed"
+            }`}
+          >
+            Start Engineer
+          </button>
+          {!hasApiKey && (
+            <p className="text-xs text-muted-foreground/50 mt-1.5 text-center">
+              Add a Gemini API key in{" "}
+              <a href="/settings" className="underline hover:text-muted-foreground/70">
+                Settings
+              </a>{" "}
+              to enable
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

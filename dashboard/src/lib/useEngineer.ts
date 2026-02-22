@@ -1,4 +1,6 @@
 "use client";
+import { PERSONALITIES } from "@opengt/shared/personalities";
+import type { EngineerPersonality } from "@opengt/shared/types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 
@@ -12,6 +14,7 @@ export interface EngineerMessage {
 
 export interface EngineerSettings {
   personalityId: string;
+  customInstructions?: string;
   verbosity: VerbosityLevel;
   mode: "ptk" | "always-open";
 }
@@ -139,10 +142,27 @@ export function useEngineer() {
   const start = useCallback(
     (settings: EngineerSettings) => {
       modeRef.current = settings.mode;
-      socketRef.current?.emit("engineer:start", {
-        personalityId: settings.personalityId,
-        verbosity: settings.verbosity,
-      });
+
+      const preset = PERSONALITIES.find((p) => p.id === settings.personalityId) ?? PERSONALITIES[0];
+      const instructions = settings.customInstructions?.trim();
+
+      if (instructions) {
+        // Build a custom personality that merges preset + custom instructions
+        const customPersonality: EngineerPersonality = {
+          ...preset,
+          systemPrompt: `${preset.systemPrompt}\n\nAdditional instructions from the driver:\n${instructions}`,
+          isCustom: true,
+        };
+        socketRef.current?.emit("engineer:start", {
+          customPersonality,
+          verbosity: settings.verbosity,
+        });
+      } else {
+        socketRef.current?.emit("engineer:start", {
+          personalityId: settings.personalityId,
+          verbosity: settings.verbosity,
+        });
+      }
 
       // If always-open, start mic immediately
       if (settings.mode === "always-open") {

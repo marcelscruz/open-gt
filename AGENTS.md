@@ -1,12 +1,12 @@
 # Open GT — GT7 Real-Time Telemetry
 
-> **Keep this file up to date.** Document new discoveries, decisions, architecture changes, and lessons learned here as the project evolves. This is the project's living knowledge base.
+> **This is a living document — keep it up to date.** Whenever you add features, change architecture, introduce new files, or make significant decisions, update this file to reflect the current state. If you notice something is outdated or missing, fix it. This is the project's single source of truth for agents.
 
 ## What Is This
 
 Real-time telemetry dashboard for **Gran Turismo 7** on PS5. Captures UDP packets from the PS5, decrypts them (Salsa20), parses binary data, and streams it to a web dashboard via WebSocket.
 
-Think of it as a racing engineer's screen — live speed, RPM, gears, tyre temps, lap times, fuel, track map, all updating at 30Hz.
+Think of it as a racing engineer's screen — live speed, RPM, gears, tyre temps, lap times, fuel, track map, all updating at 30Hz. Optionally, an AI race engineer can analyze telemetry and talk to the driver in real time via voice.
 
 ## Open Source Policy
 
@@ -31,7 +31,7 @@ These rules apply to all code in this repository. Follow them strictly.
 This is a pnpm workspace monorepo with three packages:
 - `@opengt/server` — Node.js telemetry server (`server/`)
 - `@opengt/dashboard` — Next.js frontend (`dashboard/`)
-- `@opengt/shared` — shared types and constants (`shared/`)
+- `@opengt/shared` — shared types, constants, and personalities (`shared/`)
 
 Shared types and constants live in `@opengt/shared`. Never duplicate types between server and dashboard.
 
@@ -53,6 +53,8 @@ Shared types and constants live in `@opengt/shared`. Never duplicate types betwe
 - Protocol constants (ports, magic numbers, keys) live in `@opengt/shared/constants`
 - Environment variable overrides are optional — defaults must work out of the box
 - Document any new env var in `.env.example`
+- **Environment variables** are loaded via Node's `--env-file=../.env` flag in the server dev script — no dotenv dependency
+- On `pnpm install`, a postinstall script creates `.env` from `.env.example` if it doesn't exist
 
 ### Documentation
 
@@ -77,7 +79,7 @@ That's it. Starts both the telemetry server and the dashboard. The PS5 is auto-d
 - **Dashboard:** http://localhost:4500
 - **Telemetry WebSocket:** ws://localhost:4401
 
-Optional: `PS5_IP=192.168.x.x pnpm dev` to skip auto-discovery and target a specific IP.
+Optional: Set `PS5_IP` in `.env` to skip auto-discovery and target a specific console.
 
 ## Architecture
 
@@ -86,6 +88,8 @@ PS5 ──UDP:33740──▶ Telemetry Server (port 4401) ──Socket.IO──�
                           │
                    Heartbeat every 10s
                    UDP:33739 → PS5
+                          │
+                   Analyzer ──▶ Callout Engine ──▶ Gemini Live API (voice)
 ```
 
 Two processes run via `concurrently`:
@@ -97,7 +101,75 @@ Two processes run via `concurrently`:
 - **Runtime:** Node.js + TypeScript
 - **Dashboard:** Next.js 15 + React 19 + Tailwind v4
 - **Real-time:** Socket.IO v4
+- **AI Voice:** Google Gemini Live API (native audio)
 - **Build tools:** tsx (server), pnpm
+
+## AI Race Engineer
+
+The race engineer is a voice-based AI assistant that talks to the driver during races, relaying telemetry information and answering questions.
+
+### How It Works
+
+1. **Analyzer** (`server/src/analyzer.ts`) — Processes raw telemetry into a `TelemetrySnapshot` with derived data (lap deltas, pace trends, fuel estimates, tyre temp trends)
+2. **Callout Engine** (`server/src/engineer/callouts.ts`) — Applies rules to snapshots to generate `Callout` objects (e.g. "new best lap", "fuel warning", "tyre alert") based on verbosity level and cooldown timers
+3. **Gemini Session** (`server/src/engineer/gemini.ts`) — Connects to Gemini Live API with voice output. Receives callouts and context updates, sends audio responses back to the dashboard
+4. **Engineer Orchestrator** (`server/src/engineer/index.ts`) — Manages session lifecycle, wires Socket.IO events to the Gemini session
+
+### System Instruction Architecture
+
+The system instruction sent to Gemini has two distinct layers:
+
+1. **Base system instruction** (`BASE_SYSTEM_INSTRUCTION` in `gemini.ts`) — Always present, never overridable. Defines:
+   - What the model is (race engineer on pit wall, GT7, voice radio)
+   - Communication rules (1–2 sentences, racing terminology, lap time format)
+   - How telemetry data arrives (`[CONTEXT UPDATE]` messages)
+   - How callouts work (`[CALLOUT]` messages)
+   - How to handle driver interaction
+
+2. **Personality** (from `shared/src/personalities.ts` + user custom instructions) — Appended after the base. Defines communication style only:
+   - Tone, character, energy level
+   - How to deliver information (flat vs enthusiastic, formal vs casual)
+   - Example callouts showing the personality's style
+
+Custom instructions from the user are appended after the personality and take precedence for style/behavior customization.
+
+**Important:** The base instruction must never be overridden by personalities or custom instructions. It contains the functional contract for how the model processes telemetry data.
+
+### Personalities
+
+Defined in `shared/src/personalities.ts`. Each personality has:
+- `id` — Unique identifier used in localStorage and Socket.IO events
+- `name` / `description` — Display text for the UI
+- `systemPrompt` — Personality-only instructions (tone, style, examples)
+- `voiceName` — Gemini voice (Charon, Puck, Aoede)
+
+Current presets:
+- **Marcus** — Calm F1 strategist, measured delivery, data-first (voice: Charon)
+- **Johnny** — Enthusiastic spotter, high energy, celebratory (voice: Puck)
+- **Custom** — Empty personality, user builds from scratch via custom instructions (voice: Aoede)
+
+### Dashboard Integration
+
+- **Settings page** (`dashboard/src/app/settings/page.tsx`) — API key management, engineer toggle, personality switcher with readonly system prompt display, custom instructions textarea
+- **Floating widget** (`dashboard/src/components/engineer/EngineerSettings.tsx`) — Quick access to personality, verbosity, voice mode, and start/stop. Reads personality and custom instructions from localStorage. Disabled when no API key.
+- **Overlay** (`dashboard/src/components/engineer/EngineerOverlay.tsx`) — Shows current engineer message and listening state
+- **History** (`dashboard/src/components/engineer/EngineerHistory.tsx`) — Scrollable message history
+
+Settings are persisted to localStorage (`opengt:personalityId`, `opengt:customInstructions`) and shared between the settings page and the floating widget.
+
+### Socket.IO Events (Engineer)
+
+| Event | Direction | Payload |
+|-------|-----------|---------|
+| `engineer:start` | client → server | `{ personalityId?, customPersonality?, verbosity? }` |
+| `engineer:stop` | client → server | — |
+| `engineer:audio` | both directions | Base64 PCM audio chunks |
+| `engineer:message` | server → client | `{ text, type }` |
+| `engineer:verbosity` | client → server | `{ level: 1\|2\|3 }` |
+| `config:state` | server → client | `{ hasApiKey, apiKeyHint, engineerEnabled, apiKeyValid }` |
+| `config:setApiKey` | client → server | `{ apiKey }` → callback `{ valid, error? }` |
+| `config:testKey` | client → server | callback `{ valid, error? }` |
+| `config:deleteKey` | client → server | — |
 
 ## GT7 Telemetry Protocol
 
@@ -114,21 +186,32 @@ The server broadcasts heartbeats to all subnet broadcast addresses (calculated f
 ## Project Structure
 
 ```
-shared/                     # @opengt/shared — shared types & constants
+shared/                     # @opengt/shared — shared types, constants, personalities
   src/
-    types.ts                — TelemetryData (single source of truth)
+    types.ts                — All shared types (TelemetryData, TelemetrySnapshot, Callout, EngineerPersonality, etc.)
     constants.ts            — Ports, magic numbers, protocol values
+    personalities.ts        — Engineer personality presets (Marcus, Johnny, Custom)
 server/                     # @opengt/server — Node.js telemetry server
   src/
     index.ts                — Entry point, wires modules together
     udp.ts                  — UDP socket, broadcast discovery, heartbeat
     telemetry.ts            — Decryption, parsing, throttling
     websocket.ts            — Socket.IO server, client tracking
+    analyzer.ts             — Derives TelemetrySnapshot from raw data (trends, deltas, fuel estimates)
+    engineer/
+      index.ts              — Engineer orchestrator, session lifecycle, Socket.IO events
+      gemini.ts             — Gemini Live API session (audio in/out, system instruction, context updates)
+      callouts.ts           — Rule-based callout generation from telemetry snapshots
+      validate-key.ts       — Gemini API key validation
     crypto/
       salsa20.ts            — Salsa20 implementation (no deps)
 dashboard/                  # @opengt/dashboard — Next.js frontend
   src/
-    app/                    — Next.js app (layout, page, globals.css)
+    app/
+      page.tsx              — Main dashboard (telemetry widgets + engineer UI)
+      settings/page.tsx     — Settings (API key, engineer toggle, personality, custom instructions)
+      layout.tsx            — Root layout
+      globals.css           — Tailwind v4 theme
     components/
       ConnectionStatus.tsx  — WebSocket + PS5 connection indicators
       Speedometer.tsx       — Speed display (km/h)
@@ -139,8 +222,14 @@ dashboard/                  # @opengt/dashboard — Next.js frontend
       LapTimes.tsx          — Best/last/current lap times
       FuelGauge.tsx         — Fuel level + capacity
       TrackMap.tsx          — XZ position trace (live track map)
+      engineer/
+        EngineerSettings.tsx — Floating widget for quick engineer controls
+        EngineerOverlay.tsx  — Current message display + listening indicator
+        EngineerHistory.tsx  — Scrollable message history panel
     lib/
-      useTelemetry.ts       — React hook for Socket.IO connection
+      useTelemetry.ts       — React hook for telemetry Socket.IO connection
+      useEngineer.ts        — React hook for engineer session (start/stop, audio, messages)
+.env.example                — Template for environment variables
 biome.json                  — Linting + formatting config
 tsconfig.base.json          — Shared strict TypeScript config
 pnpm-workspace.yaml         — Workspace definition
@@ -261,5 +350,5 @@ You can optionally set up a launchd service for auto-start on boot. Use `start.s
 ## Future Ideas
 
 - Store telemetry sessions for post-race analysis
-- AI race engineer: voice interface for real-time telemetry insights and conversation
 - LLM-powered driving performance analysis
+- More engineer voices and personality presets

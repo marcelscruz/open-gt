@@ -10,12 +10,6 @@
     "./constants": {
       "default": "./src/constants.ts"
     },
-    "./engineer-types": {
-      "default": "./src/engineer-types.ts"
-    },
-    "./callout-types": {
-      "default": "./src/callout-types.ts"
-    },
     "./personalities": {
       "default": "./src/personalities.ts"
     }
