@@ -6,6 +6,21 @@ Grabs the encrypted UDP telemetry stream from your console, decrypts it (Salsa20
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
+## What You'll Need
+
+**Required:**
+
+- **Node.js 20+** — runtime for the telemetry server and dashboard. [Download here](https://nodejs.org/)
+- **pnpm 9+** — package manager used for the monorepo workspace. Install with `npm install -g pnpm` or see [pnpm.io](https://pnpm.io/installation).
+- **PS4 or PS5 running Gran Turismo 7** — the console streams telemetry over your local network. Must be on the same network (same subnet) as the machine running Open GT.
+
+**Optional:**
+
+- **Gemini API key** — only needed for the AI race engineer voice feature. Free tier works fine. [Get one here](https://aistudio.google.com/apikey). You can enter it in the dashboard Settings page, or set `GEMINI_API_KEY` in your `.env` file.
+- **Your console's IP address** — useful if auto-discovery doesn't work (e.g., different subnet, VPN, or complex network setup) or if you have multiple consoles and want to target a specific one. Set `PS5_IP` in your `.env` file.
+
+Both environment variables go in a `.env` file at the project root. Rename `.env.example` to `.env` to get started.
+
 ## Features
 
 - **Zero config** — auto-discovers your console on the local network
@@ -31,10 +46,9 @@ Fire up a race in GT7 — the server finds your console automatically and data s
 If auto-discovery doesn't work (different subnet, VPN, etc.), point it at your console directly:
 
 ```bash
-export PS5_IP=192.168.1.100
+# .env
+PS5_IP=192.168.1.100
 ```
-
-**Needs:** Node.js 20+, pnpm 9+, and a PS4/PS5 running GT7 on the same network.
 
 ## How It Works
 
@@ -57,35 +71,35 @@ One catch: only one listener gets telemetry at a time. The console talks to whoe
 
 pnpm workspace monorepo, three packages:
 
-| Package | Path | What it does |
-|---------|------|-------------|
-| `@opengt/server` | `server/` | UDP listener, Salsa20 decryption, Socket.IO, race engineer |
-| `@opengt/dashboard` | `dashboard/` | Next.js web dashboard with real-time gauges |
-| `@opengt/shared` | `shared/` | Shared TypeScript types and constants |
+| Package             | Path         | What it does                                               |
+| ------------------- | ------------ | ---------------------------------------------------------- |
+| `@opengt/server`    | `server/`    | UDP listener, Salsa20 decryption, Socket.IO, race engineer |
+| `@opengt/dashboard` | `dashboard/` | Next.js web dashboard with real-time gauges                |
+| `@opengt/shared`    | `shared/`    | Shared TypeScript types and constants                      |
 
 ### Server
 
-| Module | What it does |
-|--------|-------------|
-| `src/index.ts` | Entry point — wires everything together |
-| `src/udp.ts` | UDP socket, broadcast discovery, heartbeat |
-| `src/telemetry.ts` | Decryption, binary parsing, 30Hz throttling |
-| `src/websocket.ts` | Socket.IO server, client management |
+| Module                  | What it does                                   |
+| ----------------------- | ---------------------------------------------- |
+| `src/index.ts`          | Entry point — wires everything together        |
+| `src/udp.ts`            | UDP socket, broadcast discovery, heartbeat     |
+| `src/telemetry.ts`      | Decryption, binary parsing, 30Hz throttling    |
+| `src/websocket.ts`      | Socket.IO server, client management            |
 | `src/crypto/salsa20.ts` | Pure TypeScript Salsa20 (~80 lines, zero deps) |
 
 ### Dashboard
 
-| Component | Shows |
-|-----------|-------|
-| `Speedometer` | Speed (km/h) arc gauge |
-| `Tachometer` | RPM with redline zone |
-| `GearIndicator` | Current + suggested gear |
-| `PedalBars` | Throttle/brake (0–100%) |
-| `TyreTemps` | Four-corner temps, color-coded |
-| `LapTimes` | Current, best, last lap |
-| `FuelGauge` | Level in % and liters |
-| `TrackMap` | Live position trace |
-| `ConnectionStatus` | WebSocket + console state |
+| Component          | Shows                          |
+| ------------------ | ------------------------------ |
+| `Speedometer`      | Speed (km/h) arc gauge         |
+| `Tachometer`       | RPM with redline zone          |
+| `GearIndicator`    | Current + suggested gear       |
+| `PedalBars`        | Throttle/brake (0–100%)        |
+| `TyreTemps`        | Four-corner temps, color-coded |
+| `LapTimes`         | Current, best, last lap        |
+| `FuelGauge`        | Level in % and liters          |
+| `TrackMap`         | Live position trace            |
+| `ConnectionStatus` | WebSocket + console state      |
 
 ## AI Race Engineer
 
@@ -107,11 +121,11 @@ The callout logic is a local rules engine — deterministic, no LLM involved. Ge
 
 **Personalities:**
 
-| Preset | Vibe |
-|--------|------|
-| Marcus | Calm F1 strategist — measured, data-first |
+| Preset | Vibe                                                     |
+| ------ | -------------------------------------------------------- |
+| Marcus | Calm F1 strategist — measured, data-first                |
 | Johnny | Enthusiastic spotter — high energy, celebrates overtakes |
-| Data | Pure info — no personality, just numbers |
+| Data   | Pure info — no personality, just numbers                 |
 
 You can also write your own system prompt and pick a voice.
 
@@ -124,6 +138,7 @@ All messages show up in a slide-out history panel on the right side of the dashb
 Sessions are recorded automatically to `data/sessions/` as NDJSON. A session starts when the car hits the track and ends when it leaves (or after 30s of silence).
 
 Each session gets:
+
 - `.ndjson` — every packet with timestamps, one JSON object per line
 - `.meta.json` — summary with car code, lap count, best lap, duration, packet count
 
@@ -131,16 +146,16 @@ Each session gets:
 
 GT7 sends telemetry over UDP as encrypted binary packets.
 
-| Detail | Value |
-|--------|-------|
-| Heartbeat port | UDP 33739 (send `"A"`) |
-| Telemetry port | UDP 33740 |
-| Packet size | 296 bytes |
-| Rate | 60Hz |
-| Encryption | Salsa20 |
-| Key | First 32 bytes of `"Simulator Interface Packet GT7 ver 0.0"` |
-| IV | Bytes 0x40–0x43 |
-| Magic | `0x47375330` ("G7S0") at offset 0x00 after decryption |
+| Detail         | Value                                                        |
+| -------------- | ------------------------------------------------------------ |
+| Heartbeat port | UDP 33739 (send `"A"`)                                       |
+| Telemetry port | UDP 33740                                                    |
+| Packet size    | 296 bytes                                                    |
+| Rate           | 60Hz                                                         |
+| Encryption     | Salsa20                                                      |
+| Key            | First 32 bytes of `"Simulator Interface Packet GT7 ver 0.0"` |
+| IV             | Bytes 0x40–0x43                                              |
+| Magic          | `0x47375330` ("G7S0") at offset 0x00 after decryption        |
 
 ### Packet Contents
 
@@ -148,85 +163,85 @@ All values are little-endian.
 
 #### Motion & Position
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `position` | `{x, y, z}` | World coordinates — x/z for track map, y for elevation |
-| `velocity` | `{x, y, z}` | Speed vector in m/s per axis |
-| `rotation` | `{pitch, yaw, roll}` | Car body rotation |
-| `orientationToNorth` | `float` | Compass heading |
-| `angularVelocity` | `{x, y, z}` | Rotational speed — useful for spin/oversteer detection |
-| `bodyHeight` | `float` | Ride height — drops under aero load, rises on bumps |
+| Field                | Type                 | Description                                            |
+| -------------------- | -------------------- | ------------------------------------------------------ |
+| `position`           | `{x, y, z}`          | World coordinates — x/z for track map, y for elevation |
+| `velocity`           | `{x, y, z}`          | Speed vector in m/s per axis                           |
+| `rotation`           | `{pitch, yaw, roll}` | Car body rotation                                      |
+| `orientationToNorth` | `float`              | Compass heading                                        |
+| `angularVelocity`    | `{x, y, z}`          | Rotational speed — useful for spin/oversteer detection |
+| `bodyHeight`         | `float`              | Ride height — drops under aero load, rises on bumps    |
 
 #### Engine & Drivetrain
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `engineRPM` | `float` | Current RPM |
-| `minAlertRPM` | `int16` | Shift light activation RPM |
-| `maxAlertRPM` | `int16` | Redline RPM |
-| `boost` | `float` | Turbo boost pressure (0 for NA cars) |
-| `currentGear` | `uint8` | 0=reverse, 1–8=forward gears |
-| `suggestedGear` | `uint8` | Game's recommended gear |
-| `clutch` | `float` | Clutch pedal position |
-| `clutchEngagement` | `float` | Clutch engagement level |
-| `rpmFromClutchToGearbox` | `float` | RPM after clutch |
-| `transmissionTopSpeed` | `float` | Top speed for current gearing |
-| `gearRatios` | `float[8]` | All 8 forward gear ratios |
+| Field                    | Type       | Description                          |
+| ------------------------ | ---------- | ------------------------------------ |
+| `engineRPM`              | `float`    | Current RPM                          |
+| `minAlertRPM`            | `int16`    | Shift light activation RPM           |
+| `maxAlertRPM`            | `int16`    | Redline RPM                          |
+| `boost`                  | `float`    | Turbo boost pressure (0 for NA cars) |
+| `currentGear`            | `uint8`    | 0=reverse, 1–8=forward gears         |
+| `suggestedGear`          | `uint8`    | Game's recommended gear              |
+| `clutch`                 | `float`    | Clutch pedal position                |
+| `clutchEngagement`       | `float`    | Clutch engagement level              |
+| `rpmFromClutchToGearbox` | `float`    | RPM after clutch                     |
+| `transmissionTopSpeed`   | `float`    | Top speed for current gearing        |
+| `gearRatios`             | `float[8]` | All 8 forward gear ratios            |
 
 #### Driver Inputs
 
-| Field | Type | Description |
-|-------|------|-------------|
+| Field      | Type    | Description                  |
+| ---------- | ------- | ---------------------------- |
 | `throttle` | `uint8` | 0–255 (normalized to 0–100%) |
-| `brake` | `uint8` | 0–255 (normalized to 0–100%) |
+| `brake`    | `uint8` | 0–255 (normalized to 0–100%) |
 
 #### Tyres & Suspension
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `tyreTemp` | `{fl, fr, rl, rr}` | Temperature per corner (°C) |
-| `wheelRPS` | `{fl, fr, rl, rr}` | Wheel rotations/sec — compare corners for wheelspin/lockup |
-| `tyreRadius` | `{fl, fr, rl, rr}` | Tyre radius per corner |
-| `suspHeight` | `{fl, fr, rl, rr}` | Suspension displacement — kerb strikes, bottoming out |
+| Field        | Type               | Description                                                |
+| ------------ | ------------------ | ---------------------------------------------------------- |
+| `tyreTemp`   | `{fl, fr, rl, rr}` | Temperature per corner (°C)                                |
+| `wheelRPS`   | `{fl, fr, rl, rr}` | Wheel rotations/sec — compare corners for wheelspin/lockup |
+| `tyreRadius` | `{fl, fr, rl, rr}` | Tyre radius per corner                                     |
+| `suspHeight` | `{fl, fr, rl, rr}` | Suspension displacement — kerb strikes, bottoming out      |
 
 #### Fluids & Temps
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `fuelLevel` | `float` | Current fuel amount |
-| `fuelCapacity` | `float` | Tank size |
-| `oilPressure` | `float` | Engine oil pressure |
-| `oilTemp` | `float` | Engine oil temperature |
-| `waterTemp` | `float` | Coolant temperature |
+| Field          | Type    | Description            |
+| -------------- | ------- | ---------------------- |
+| `fuelLevel`    | `float` | Current fuel amount    |
+| `fuelCapacity` | `float` | Tank size              |
+| `oilPressure`  | `float` | Engine oil pressure    |
+| `oilTemp`      | `float` | Engine oil temperature |
+| `waterTemp`    | `float` | Coolant temperature    |
 
 #### Race Info
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `lapCount` | `int16` | Current lap number |
-| `totalLaps` | `int16` | Total laps (0 = time trial / free run) |
-| `bestLapTime` | `int32` | Best lap in ms (−1 if unset) |
-| `lastLapTime` | `int32` | Last completed lap in ms (−1 if unset) |
-| `dayProgression` | `int32` | Time of day in race (day/night cycles) |
-| `raceStartPosition` | `int16` | Grid position |
-| `preRaceNumCars` | `int16` | Number of cars |
-| `calcMaxSpeed` | `int16` | Calculated max speed for the car |
-| `carCode` | `int32` | Unique car identifier |
+| Field               | Type    | Description                            |
+| ------------------- | ------- | -------------------------------------- |
+| `lapCount`          | `int16` | Current lap number                     |
+| `totalLaps`         | `int16` | Total laps (0 = time trial / free run) |
+| `bestLapTime`       | `int32` | Best lap in ms (−1 if unset)           |
+| `lastLapTime`       | `int32` | Last completed lap in ms (−1 if unset) |
+| `dayProgression`    | `int32` | Time of day in race (day/night cycles) |
+| `raceStartPosition` | `int16` | Grid position                          |
+| `preRaceNumCars`    | `int16` | Number of cars                         |
+| `calcMaxSpeed`      | `int16` | Calculated max speed for the car       |
+| `carCode`           | `int32` | Unique car identifier                  |
 
 #### Status Flags
 
-| Flag | Description |
-|------|-------------|
+| Flag         | Description                      |
+| ------------ | -------------------------------- |
 | `carOnTrack` | On track (false in menus/replay) |
-| `paused` | Game paused |
-| `loading` | Loading screen / menus |
-| `inGear` | Transmission engaged |
-| `hasTurbo` | Forced induction |
-| `revLimiter` | Hitting rev limiter |
-| `handbrake` | Handbrake on |
-| `lightsOn` | Headlights on |
-| `asmActive` | Stability management intervening |
-| `tcsActive` | Traction control intervening |
+| `paused`     | Game paused                      |
+| `loading`    | Loading screen / menus           |
+| `inGear`     | Transmission engaged             |
+| `hasTurbo`   | Forced induction                 |
+| `revLimiter` | Hitting rev limiter              |
+| `handbrake`  | Handbrake on                     |
+| `lightsOn`   | Headlights on                    |
+| `asmActive`  | Stability management intervening |
+| `tcsActive`  | Traction control intervening     |
 
 ### Derivable Data
 
@@ -248,11 +263,11 @@ Most things are in the dashboard Settings page. For env var overrides, copy `.en
 cp .env.example .env
 ```
 
-| Variable | Default | What it does |
-|----------|---------|-------------|
-| `PS5_IP` | auto-discover | Target a specific console |
-| `WS_PORT` | `4401` | WebSocket server port |
-| `GEMINI_API_KEY` | — | Override the Settings-stored key (useful for CI/Docker) |
+| Variable         | Default       | What it does                                            |
+| ---------------- | ------------- | ------------------------------------------------------- |
+| `PS5_IP`         | auto-discover | Target a specific console                               |
+| `WS_PORT`        | `4401`        | WebSocket server port                                   |
+| `GEMINI_API_KEY` | —             | Override the Settings-stored key (useful for CI/Docker) |
 
 ## Development
 
@@ -277,10 +292,10 @@ pnpm format         # Auto-format
 
 ## Ports
 
-| Port | Service |
-|------|---------|
-| 4500 | Dashboard |
-| 4401 | Telemetry WebSocket |
+| Port  | Service                 |
+| ----- | ----------------------- |
+| 4500  | Dashboard               |
+| 4401  | Telemetry WebSocket     |
 | 33739 | UDP heartbeat → console |
 | 33740 | UDP telemetry ← console |
 
